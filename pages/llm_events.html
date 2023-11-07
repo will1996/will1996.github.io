@@ -1,0 +1,145 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Automatic Event Generation with LLMs</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="../assets/css/subpage.css" />
+	</head>
+	<body class="is-preload">
+
+		<!-- Main -->
+			<div id="main">
+
+				<!-- One -->
+					<section id="one">
+						<header class="major">
+							<h2> Large Language Models for Event Generation </h2>
+						</header>
+                        <!--
+                        <p>Large Language models have come to prominence lately for their ability to generate plausible text in response to prompts. 
+                            This popularity has garnered some work in the games industry, most closely related to this work is "Craft an Iron Sword"
+                            an exploration by Volum et Al at Microsoft Research. They use Open AI Codex, GPT-3 fine tuned on github to generate API calls
+                            to MineFlayer, a Minecraft bot API. The goal of the paper is to automatically create game behavior in response to natural language
+                            from players. I Love this paper, it's dirt simple, and yet it creates compelling interactions. The drawbacks are those that come along 
+                            with any generative method, the stochastic nature of the output, and the prevalence of haullucinations means that having a LLM directly
+                            controlling gameplay can produce immersion breaking bugs, not to mention the performance implications of invoking a model like this at runtime. 
+                            Another weakness is the specificity to Minecraft. 
+                            </p>
+
+                            <p>
+                            This work seeks to create Engine agnostic event information offline, which can then be used to drive gameplay events without the need for 
+                            code generation, or invoking expensive language models at runtime. 
+                            </p>
+
+                            <p>
+                            I take a hybrid approach, sandboxing LLM prompting behind a validation system which filters out bad output. This gives me the best of both worlds, 
+                            I use GPT-3 for its strenghts in document summarization and sentiment analysis, and get the robustness required by industrial applications at the same time.
+                            </p>
+
+                            <p>
+                            This approach works by creating an intermediate stream of events, where an event is a subject, a start time, and an end time.
+                            </p>
+
+                            <p>
+                            The system uses the following, simple prompt to extract formatted data from any natural language script:
+                            " {} ,Identify the main subjects of the story. Identify the sentences in the story that are about each subject. 
+                            Return  the results in a list of json objects"<br>
+                            Where the braces are python format braces, and are replaced with a script of any length.
+                            </p>
+
+                            <p>
+                            This prompt leans of prior work which finds that multi-stage prompting which provides a series of steps perform best. 
+                            We do this here by first identifying the main subjects of the script, then Identify the sentences that are about each subject, 
+                            then converting that data into a parseable format. 
+                            </p>
+
+                            
+                            <p>
+                            The output of this stage looks like:
+                            </br>
+
+                            input:  In a traquil garden there sits a round wooden table. The table has been here since its owner brought it back from safari many years ago. On top of the table rests a potted plant, one of many specimens in the owners fine collection. Flowering bushes are also on the edges, their love of the sun explains the umbrella, used by the occupants of the garden to keep cool during the long summer days.  The stone head of the budda statue looks over the serene scene with a look of passive contentement giving the garden a well deserved feeling of warmth. This is a family garden, the slide for the kids put in a position from which the aging parents could admire their children playing. ,Identify the main subjects of the story. Identify the sentences in the story that are about each subject. Return the results in a list of json objects
+
+                            </br>
+
+                            [</br>
+                            {</br>
+                                "subject": "round wooden table",</br>
+                                "sentences": [</br>
+                                "In a tranquil garden there sits a round wooden table.",</br>
+                                "The table has been here since its owner brought it back from safari many years ago."</br>
+                                ]</br>
+                            },</br>
+                            {</br>
+                                "subject": "potted plant",</br>
+                                "sentences": [</br>
+                                "On top of the table rests a potted plant, one of many specimens in the owner's fine collection."</br>
+                                ]</br>
+                            },</br>
+                            {</br>
+                                "subject": "flowering bushes",</br>
+                                "sentences": [</br>
+                                "Flowering bushes are also on the edges, their love of the sun explains the umbrella, used by the occupants of the garden to keep cool during the long summer days."</br>
+                                ]</br>
+                            },</br>
+                            {</br>
+                                "subject": "Buddha statue",</br>
+                                "sentences": [</br>
+                                "The stone head of the Buddha statue looks over the serene scene with a look of passive contentment, giving the garden a well-deserved feeling of warmth."</br>
+                                ]</br>
+                            },</br>
+                            {</br>
+                                "subject": "family garden",</br>
+                                "sentences": [</br>
+                                "This is a family garden, the slide for the kids put in a position from which the aging parents could admire their children playing."</br>
+                                ]</br>
+                            }</br>
+                            ]</br>
+                            </p>
+
+                            <p>
+                            we then run a parsing system on the output data to get:
+                            [  </br>
+                             {'start_char': 0, 'end_char': 135, 'subject': 'round wooden table'}, </br>
+                             {'start_char': 232, 'end_char': 394, 'subject': 'flowering bushes'}, </br>
+                             {'start_char': 548, 'end_char': 679, 'subject': 'family garden'}</br>
+                            ]</br></p>
+
+                            <p>
+                            Timing information is acquired from the start and end -char pairs by feeding the script to IBM Watson Text to Speech, which 
+                            produces an audio narration file, and converting the char positions into times using the average character rate of the audio.
+                            </p>
+
+
+                            <p>
+                            This event stream can now drive behavior in any 3D environment with two easily satisfied assumtions. </br>
+                            1. The system is event driven, a common architecture among game engines, and trivially implementable</br>
+                            2. The 3D assets are tagged with the same names used in the script, e.g round wooden table </br>
+                            </p>
+
+                            This is a functional example of the entire pipeline in the Unity Game Engine:
+
+                        </p>
+                        <iframe width="560" height="315" src="https://www.youtube.com/embed/TTyi69K5byA?si=8rrI58KMEN4no-N8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                        <iframe width="560" height="315" src="https://www.youtube.com/embed/KtqGkxCCO64?si=U3Qe7x-UIcaqySw4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+					</section>
+                -->
+
+				<!-- Two -->
+
+            <embed src="../assets/autolighting.pdf" width="1400" height="2100" />
+            <a  href="../index.html" class="button"> Back Home</a>
+			</div>
+
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/jquery.poptrox.min.js"></script>
+			<script src="../assets/js/browser.min.js"></script>
+			<script src="../assets/js/breakpoints.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<script src="../assets/js/main.js"></script>
+
+	</body>
+</html>
